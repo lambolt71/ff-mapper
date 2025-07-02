@@ -25,14 +25,14 @@ if st.sidebar.button("Add Path"):
         chosen = to_and_chosen[-1]
         to_pages = to_and_chosen[:-1]
 
-        # Save all other links as non-chosen (optional, not drawn)
+        # Save skipped options
         for to_page in to_pages:
             st.session_state.edges.append({
                 "from": from_page,
                 "to": to_page,
                 "chosen": False,
                 "tag": "",
-                "is_secret": False  # NEW
+                "is_secret": False
             })
 
         # Save chosen path
@@ -41,35 +41,46 @@ if st.sidebar.button("Add Path"):
             "to": chosen.replace("*", ""),
             "chosen": True,
             "tag": tag_input.strip(),
-            "is_secret": chosen.endswith("*")  # ✅ Add this line
+            "is_secret": chosen.endswith("*")
         })
     else:
         st.warning("Please enter at least a from-page and a chosen path.")
 
-# --- Export/Import ---
+# --- Export ---
 st.sidebar.markdown("---")
 if st.sidebar.button("Export as CSV"):
     df = pd.DataFrame(st.session_state.edges)
-    df.to_csv("graph_data.csv", index=False)
-    st.sidebar.success("Saved as graph_data.csv")
 
-    # ✅ Add download button for user to get the file
-    with open("graph_data.csv", "rb") as f:
-        st.sidebar.download_button(
-            label="⬇️ Download CSV",
-            data=f,
-            file_name="graph_data.csv",
-            mime="text/csv"
-        )
-        
+    # Clean and ensure types
+    df["from"] = df["from"].astype(str)
+    df["to"] = df["to"].astype(str)
+    df["chosen"] = df["chosen"].astype(bool)
+    df["tag"] = df["tag"].fillna("").astype(str)
+    df["is_secret"] = df["is_secret"].fillna(False).astype(bool)
 
+    csv = df.to_csv(index=False).encode("utf-8")
+    st.sidebar.download_button("⬇️ Download CSV", csv, "graph_data.csv", "text/csv")
+
+# --- Import ---
 uploaded = st.sidebar.file_uploader("Import CSV", type="csv")
 if uploaded:
     df = pd.read_csv(uploaded)
+
+    # Ensure columns and fill missing data
+    expected_cols = {"from", "to", "chosen", "tag", "is_secret"}
+    for col in expected_cols:
+        if col not in df.columns:
+            df[col] = "" if col == "tag" else False
+    df["from"] = df["from"].astype(str)
+    df["to"] = df["to"].astype(str)
+    df["chosen"] = df["chosen"].astype(bool)
+    df["tag"] = df["tag"].fillna("").astype(str)
+    df["is_secret"] = df["is_secret"].fillna(False).astype(bool)
+
     st.session_state.edges = df.to_dict(orient="records")
     st.sidebar.success("Imported successfully")
 
-# --- Input Format Help ---
+# --- Help ---
 st.sidebar.markdown("---")
 st.sidebar.markdown("### ℹ️ Input Format Help")
 st.sidebar.markdown("""
@@ -90,11 +101,11 @@ added_edges = set()
 for edge in st.session_state.edges:
     edge_key = (edge["from"], edge["to"])
     if edge_key not in added_edges:
-        # Add from-node if not already added
+        # Add from-node
         if edge["from"] not in net.node_ids:
             net.add_node(edge["from"], label=edge["from"])
 
-        # Add to-node with optional tooltip
+        # Add to-node with tooltip
         if edge["to"] not in net.node_ids:
             net.add_node(
                 edge["to"],
@@ -102,22 +113,20 @@ for edge in st.session_state.edges:
                 title=edge["tag"] if edge["tag"] else ""
             )
 
-        # Add the edge
-        edge_style = "dash" if edge.get("is_secret", False) else "solid"
+        # Add edge
         net.add_edge(
             edge["from"],
             edge["to"],
             color="lime" if edge["chosen"] else "gray",
             width=3 if edge["chosen"] else 1,
             title=edge["tag"] if edge["tag"] else "",
-             dashes=(edge_style == "dash")  # pyvis supports `dashes=True`
+            dashes=edge.get("is_secret", False)
         )
-
         added_edges.add(edge_key)
 
-# Save HTML and render
+# --- Render Graph ---
 net_path = "graph.html"
 net.write_html(net_path)
-with open(net_path, 'r', encoding='utf-8') as f:
+with open(net_path, "r", encoding="utf-8") as f:
     html_string = f.read()
 st.components.v1.html(html_string, height=600, scrolling=True)
