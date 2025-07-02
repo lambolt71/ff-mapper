@@ -79,7 +79,8 @@ if uploaded:
 
     st.session_state.edges = df.to_dict(orient="records")
     st.sidebar.success("Imported successfully")
-    st.experimental_rerun()  # 🔁 Viktigt för att återaktivera Add Path efter import
+    #st.experimental_rerun()  # 🔁 Viktigt för att återaktivera Add Path efter import
+    st.rerun()
 
 # --- Help ---
 st.sidebar.markdown("---")
