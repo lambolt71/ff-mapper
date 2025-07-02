@@ -66,24 +66,20 @@ uploaded = st.sidebar.file_uploader("Import CSV", type="csv")
 if uploaded:
     df = pd.read_csv(uploaded)
 
-    # Ensure columns exist
+    # Ensure columns and fill missing data
     expected_cols = {"from", "to", "chosen", "tag", "is_secret"}
     for col in expected_cols:
         if col not in df.columns:
             df[col] = "" if col == "tag" else False
-
     df["from"] = df["from"].astype(str)
     df["to"] = df["to"].astype(str)
     df["chosen"] = df["chosen"].astype(bool)
     df["tag"] = df["tag"].fillna("").astype(str)
-
-    if df["is_secret"].dtype == object:
-        df["is_secret"] = df["is_secret"].map(lambda x: str(x).lower() == "true")
-    else:
-        df["is_secret"] = df["is_secret"].fillna(False).astype(bool)
+    df["is_secret"] = df["is_secret"].fillna(False).astype(bool)
 
     st.session_state.edges = df.to_dict(orient="records")
     st.sidebar.success("Imported successfully")
+    st.experimental_rerun()  # 🔁 Viktigt för att återaktivera Add Path efter import
 
 # --- Help ---
 st.sidebar.markdown("---")
@@ -97,31 +93,27 @@ st.sidebar.markdown("""
 - You can optionally add a short **text tag** — this appears as a **tooltip** on the destination node.
 - Green lines show your **chosen path**.  
   Dashed green lines indicate **secret paths**.
+- Arrows show directions of travel
+- Orange Nodes have not been explored further yet
 """)
 
 # --- Build Graph ---
 net = Network(height="700px", width="100%", bgcolor="#111", font_color="white", directed=True)
 added_edges = set()
 
-# Identify unexplored nodes
-from_nodes = {e["from"] for e in st.session_state.edges}
-to_nodes = {e["to"] for e in st.session_state.edges}
-unexplored_nodes = to_nodes - from_nodes
-
 for edge in st.session_state.edges:
     edge_key = (edge["from"], edge["to"])
     if edge_key not in added_edges:
         # Add from-node
         if edge["from"] not in net.node_ids:
-            net.add_node(edge["from"], label=edge["from"], color="limegreen")
+            net.add_node(edge["from"], label=edge["from"])
 
-        # Add to-node
+        # Add to-node with tooltip
         if edge["to"] not in net.node_ids:
             net.add_node(
                 edge["to"],
                 label=edge["to"],
-                title=edge["tag"] if edge["tag"] else "",
-                color="orangered" if edge["to"] in unexplored_nodes else "limegreen"
+                title=edge["tag"] if edge["tag"] else ""
             )
 
         # Add edge
