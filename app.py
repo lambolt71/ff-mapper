@@ -31,7 +31,8 @@ if st.sidebar.button("Add Path"):
                 "from": from_page,
                 "to": to_page,
                 "chosen": False,
-                "tag": ""
+                "tag": "",
+                "is_secret": False  # NEW
             })
 
         # Save chosen path
@@ -39,7 +40,8 @@ if st.sidebar.button("Add Path"):
             "from": from_page,
             "to": chosen.replace("*", ""),
             "chosen": True,
-            "tag": tag_input.strip()
+            "tag": tag_input.strip(),
+            "is_secret": chosen.endswith("*")  # ✅ Add this line
         })
     else:
         st.warning("Please enter at least a from-page and a chosen path.")
@@ -64,16 +66,29 @@ added_edges = set()
 for edge in st.session_state.edges:
     edge_key = (edge["from"], edge["to"])
     if edge_key not in added_edges:
-        net.add_node(edge["from"], label=edge["from"])
-        net.add_node(edge["to"], label=edge["to"])
+        # Add from-node if not already added
+        if edge["from"] not in net.node_ids:
+            net.add_node(edge["from"], label=edge["from"])
 
+        # Add to-node with optional tooltip
+        if edge["to"] not in net.node_ids:
+            net.add_node(
+                edge["to"],
+                label=edge["to"],
+                title=edge["tag"] if edge["tag"] else ""
+            )
+
+        # Add the edge
+        edge_style = "dash" if edge.get("is_secret", False) else "solid"
         net.add_edge(
             edge["from"],
             edge["to"],
             color="lime" if edge["chosen"] else "gray",
             width=3 if edge["chosen"] else 1,
-            title=edge["tag"] if edge["tag"] else ""
+            title=edge["tag"] if edge["tag"] else "",
+             dashes=(edge_style == "dash")  # pyvis supports `dashes=True`
         )
+
         added_edges.add(edge_key)
 
 # Save HTML and render
