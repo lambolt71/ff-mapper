@@ -59,6 +59,20 @@ if uploaded:
     st.session_state.edges = df.to_dict(orient="records")
     st.sidebar.success("Imported successfully")
 
+# --- Input Format Help ---
+st.sidebar.markdown("---")
+st.sidebar.markdown("### ℹ️ Input Format Help")
+st.sidebar.markdown("""
+- Enter a **sequence of page numbers** separated by commas.
+- The **first number** is the current page you're on.
+- The **last number** is the **chosen destination page**.
+- All numbers **in between** are unchosen options from that page.
+- Add `*` to the last number to mark it as a **secret or hidden exit**.
+- You can optionally add a short **text tag** — this appears as a **tooltip** on the destination node.
+- Green lines show your **chosen path**.  
+  Dashed green lines indicate **secret paths**.
+""")
+
 # --- Build Graph ---
 net = Network(height="700px", width="100%", bgcolor="#111", font_color="white")
 added_edges = set()
