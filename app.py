@@ -58,22 +58,23 @@ if uploaded:
     st.sidebar.success("Imported successfully")
 
 # --- Build Graph ---
-G = nx.DiGraph()
-for edge in st.session_state.edges:
-    G.add_edge(edge["from"], edge["to"])
-
-# --- Display Graph ---
 net = Network(height="700px", width="100%", bgcolor="#111", font_color="white")
-net.from_nx(G)
+added_edges = set()
 
-# Add extra info to edges (color, label)
 for edge in st.session_state.edges:
-    e = net.get_edge(edge["from"], edge["to"])
-    if e:
-        e["color"] = "lime" if edge["chosen"] else "gray"
-        e["width"] = 3 if edge["chosen"] else 1
-        if edge["tag"]:
-            e["title"] = edge["tag"]
+    edge_key = (edge["from"], edge["to"])
+    if edge_key not in added_edges:
+        net.add_node(edge["from"], label=edge["from"])
+        net.add_node(edge["to"], label=edge["to"])
+
+        net.add_edge(
+            edge["from"],
+            edge["to"],
+            color="lime" if edge["chosen"] else "gray",
+            width=3 if edge["chosen"] else 1,
+            title=edge["tag"] if edge["tag"] else ""
+        )
+        added_edges.add(edge_key)
 
 # Save HTML and render
 net_path = "graph.html"
@@ -81,4 +82,3 @@ net.write_html(net_path)
 with open(net_path, 'r', encoding='utf-8') as f:
     html_string = f.read()
 st.components.v1.html(html_string, height=600, scrolling=True)
-
