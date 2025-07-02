@@ -95,7 +95,7 @@ st.sidebar.markdown("""
 """)
 
 # --- Build Graph ---
-net = Network(height="700px", width="100%", bgcolor="#111", font_color="white")
+net = Network(height="700px", width="100%", bgcolor="#111", font_color="white", directed=True)
 added_edges = set()
 
 for edge in st.session_state.edges:
