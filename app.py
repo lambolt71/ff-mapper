@@ -63,10 +63,10 @@ if st.sidebar.button("Export as CSV"):
 
 # --- Import ---
 uploaded = st.sidebar.file_uploader("Import CSV", type="csv")
-if uploaded:
+if uploaded and "csv_loaded" not in st.session_state:
     df = pd.read_csv(uploaded)
 
-    # Ensure columns and fill missing data
+    # Säkerställ kolumner och typer
     expected_cols = {"from", "to", "chosen", "tag", "is_secret"}
     for col in expected_cols:
         if col not in df.columns:
@@ -78,8 +78,7 @@ if uploaded:
     df["is_secret"] = df["is_secret"].fillna(False).astype(bool)
 
     st.session_state.edges = df.to_dict(orient="records")
-    st.sidebar.success("Imported successfully")
-    #st.experimental_rerun()  # 🔁 Viktigt för att återaktivera Add Path efter import
+    st.session_state.csv_loaded = True
     st.rerun()
 
 # --- Help ---
