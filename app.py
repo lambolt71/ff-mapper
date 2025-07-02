@@ -53,6 +53,16 @@ if st.sidebar.button("Export as CSV"):
     df.to_csv("graph_data.csv", index=False)
     st.sidebar.success("Saved as graph_data.csv")
 
+    # ✅ Add download button for user to get the file
+    with open("graph_data.csv", "rb") as f:
+        st.sidebar.download_button(
+            label="⬇️ Download CSV",
+            data=f,
+            file_name="graph_data.csv",
+            mime="text/csv"
+        )
+        
+
 uploaded = st.sidebar.file_uploader("Import CSV", type="csv")
 if uploaded:
     df = pd.read_csv(uploaded)
