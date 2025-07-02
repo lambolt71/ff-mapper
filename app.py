@@ -65,7 +65,9 @@ if st.button("Generate Graph") and data_input.strip():
     # Generate and display HTML
     with tempfile.TemporaryDirectory() as tmpdirname:
         path = os.path.join(tmpdirname, "graph.html")
-        net.show(path)
-        with open(path, "r", encoding="utf-8") as f:
+        net.write_html(path, notebook=False)
+
+        with open(path, 'r', encoding='utf-8') as f:
             html_content = f.read()
-        st.components.v1.html(html_content, height=750, scrolling=True)
+
+        st.components.v1.html(html_content, height=600, scrolling=True)
