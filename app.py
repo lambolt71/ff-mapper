@@ -77,9 +77,8 @@ for edge in st.session_state.edges:
 
 # Save HTML and render
 net_path = "graph.html"
-net.show(net_path)
+net.write_html(net_path)
+with open(net_path, 'r', encoding='utf-8') as f:
+    html_string = f.read()
+st.components.v1.html(html_string, height=600, scrolling=True)
 
-# Display in app
-with open(net_path, "r", encoding="utf-8") as f:
-    html_content = f.read()
-st.components.v1.html(html_content, height=750, scrolling=True)
