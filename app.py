@@ -1,73 +1,85 @@
 import streamlit as st
 import networkx as nx
 from pyvis.network import Network
-import tempfile
+import pandas as pd
 import os
 
-st.set_page_config(page_title="FF Gamebook Graph", layout="wide")
-st.title("📘 Fighting Fantasy Playthrough Visualizer")
+st.set_page_config(page_title="FF Graph Mapper", layout="wide")
+st.title("🗺️ Fighting Fantasy Graph Builder")
 
-st.markdown("""
-Enter your playthrough transitions below.  
-Use format: `start,rejected1,...,rejectedN,chosen`  
-Mark secret paths with `*`, e.g., `123,400*`  
-Each line must begin with a unique paragraph number.
-""")
+# Storage for user inputs
+if "edges" not in st.session_state:
+    st.session_state.edges = []
 
-data_input = st.text_area("Enter transitions (one per line)", height=200)
+# --- Sidebar: Add New Path ---
+st.sidebar.header("Add Path")
+path_input = st.sidebar.text_input("Enter path (e.g. 123,4,10,200,400*)")
+tag_input = st.sidebar.text_input("Optional tag/comment (e.g. got potion from wizard)")
+if st.sidebar.button("Add Path"):
+    parts = [p.strip() for p in path_input.split(",") if p.strip()]
 
-if st.button("Generate Graph") and data_input.strip():
-    lines = data_input.strip().split("\n")
-    G = nx.DiGraph()
+    if len(parts) >= 2:
+        from_page = parts[0]
+        to_and_chosen = parts[1:]
 
-    for line in lines:
-        parts = [p.strip() for p in line.split(",") if p.strip()]
-        if not parts or len(parts) < 2:
-            continue
+        chosen = to_and_chosen[-1]
+        to_pages = to_and_chosen[:-1]
 
-        source = parts[0]
-        targets = parts[1:]
+        # Save all other links as non-chosen (optional, not drawn)
+        for to_page in to_pages:
+            st.session_state.edges.append({
+                "from": from_page,
+                "to": to_page,
+                "chosen": False,
+                "tag": ""
+            })
 
-        chosen_raw = targets[-1]
-        is_secret = chosen_raw.endswith("*")
-        chosen = chosen_raw.rstrip("*")
+        # Save chosen path
+        st.session_state.edges.append({
+            "from": from_page,
+            "to": chosen.replace("*", ""),
+            "chosen": True,
+            "tag": tag_input.strip()
+        })
+    else:
+        st.warning("Please enter at least a from-page and a chosen path.")
 
-        # Add chosen path
-        G.add_edge(source, chosen, type="chosen", secret=is_secret)
+# --- Export/Import ---
+st.sidebar.markdown("---")
+if st.sidebar.button("Export as CSV"):
+    df = pd.DataFrame(st.session_state.edges)
+    df.to_csv("graph_data.csv", index=False)
+    st.sidebar.success("Saved as graph_data.csv")
 
-        # Add rejected options
-        for opt in targets[:-1]:
-            if opt == source:
-                continue
-            G.add_edge(source, opt, type="rejected", secret=False)
+uploaded = st.sidebar.file_uploader("Import CSV", type="csv")
+if uploaded:
+    df = pd.read_csv(uploaded)
+    st.session_state.edges = df.to_dict(orient="records")
+    st.sidebar.success("Imported successfully")
 
-    # Create Pyvis network
-    net = Network(height="700px", width="100%", directed=True, notebook=False, bgcolor="#222222", font_color="white")
-    net.barnes_hut()
+# --- Build Graph ---
+G = nx.DiGraph()
+for edge in st.session_state.edges:
+    G.add_edge(edge["from"], edge["to"])
 
-    for node in G.nodes:
-        net.add_node(node, label=f"{node}")
+# --- Display Graph ---
+net = Network(height="700px", width="100%", bgcolor="#111", font_color="white")
+net.from_nx(G)
 
-    for source, target, data in G.edges(data=True):
-        if data["type"] == "chosen":
-            if data.get("secret", False):
-                color = "red"
-                dashes = True
-            else:
-                color = "green"
-                dashes = False
-        else:
-            color = "gray"
-            dashes = True
+# Add extra info to edges (color, label)
+for edge in st.session_state.edges:
+    e = net.get_edge(edge["from"], edge["to"])
+    if e:
+        e["color"] = "lime" if edge["chosen"] else "gray"
+        e["width"] = 3 if edge["chosen"] else 1
+        if edge["tag"]:
+            e["title"] = edge["tag"]
 
-        net.add_edge(source, target, color=color, arrows="to", dashes=dashes)
+# Save HTML and render
+net_path = "graph.html"
+net.show(net_path)
 
-    # Generate and display HTML
-    with tempfile.TemporaryDirectory() as tmpdirname:
-        path = os.path.join(tmpdirname, "graph.html")
-        net.write_html(path, notebook=False)
-
-        with open(path, 'r', encoding='utf-8') as f:
-            html_content = f.read()
-
-        st.components.v1.html(html_content, height=600, scrolling=True)
+# Display in app
+with open(net_path, "r", encoding="utf-8") as f:
+    html_content = f.read()
+st.components.v1.html(html_content, height=750, scrolling=True)
