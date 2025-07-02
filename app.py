@@ -5,7 +5,7 @@ import pandas as pd
 import os
 
 st.set_page_config(page_title="FF Graph Mapper", layout="wide")
-st.title("🗺️ Fighting Fantasy Graph Builder")
+st.title("🗌️ Fighting Fantasy Graph Builder")
 
 # Storage for user inputs
 if "edges" not in st.session_state:
@@ -92,28 +92,32 @@ st.sidebar.markdown("""
 - You can optionally add a short **text tag** — this appears as a **tooltip** on the destination node.
 - Green lines show your **chosen path**.  
   Dashed green lines indicate **secret paths**.
+- Nodes shown in **red** are destinations you've seen but never departed from (unexplored).
 """)
 
 # --- Build Graph ---
 net = Network(height="700px", width="100%", bgcolor="#111", font_color="white", directed=True)
 added_edges = set()
 
+# Step 1: Identify explored and unexplored nodes
+from_nodes = {e["from"] for e in st.session_state.edges}
+to_nodes = {e["to"] for e in st.session_state.edges}
+all_nodes = from_nodes.union(to_nodes)
+
+# Step 2: Add nodes with color based on exploration
+for node in all_nodes:
+    if node not in net.node_ids:
+        is_explored = node in from_nodes
+        net.add_node(
+            node,
+            label=node,
+            color="limegreen" if is_explored else "orangered"
+        )
+
+# Step 3: Add edges with styles
 for edge in st.session_state.edges:
     edge_key = (edge["from"], edge["to"])
     if edge_key not in added_edges:
-        # Add from-node
-        if edge["from"] not in net.node_ids:
-            net.add_node(edge["from"], label=edge["from"])
-
-        # Add to-node with tooltip
-        if edge["to"] not in net.node_ids:
-            net.add_node(
-                edge["to"],
-                label=edge["to"],
-                title=edge["tag"] if edge["tag"] else ""
-            )
-
-        # Add edge
         net.add_edge(
             edge["from"],
             edge["to"],
