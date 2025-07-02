@@ -81,6 +81,10 @@ if uploaded and "csv_loaded" not in st.session_state:
     st.session_state.csv_loaded = True
     st.rerun()
 
+# Efter omstart: rensa flagga
+if "csv_loaded" in st.session_state:
+    del st.session_state.csv_loaded
+
 # --- Help ---
 st.sidebar.markdown("---")
 st.sidebar.markdown("### ℹ️ Input Format Help")
