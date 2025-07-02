@@ -2,50 +2,23 @@ import streamlit as st
 import networkx as nx
 from pyvis.network import Network
 import pandas as pd
-import os
 
 st.set_page_config(page_title="FF Graph Mapper", layout="wide")
-st.title("📜 Fighting Fantasy Graph Builder")
+st.title("🗘️ Fighting Fantasy Graph Builder")
 
-# Initialize session state
+# --- Session State Storage ---
 if "edges" not in st.session_state:
     st.session_state.edges = []
 
-# --- Import CSV ---
-uploaded = st.sidebar.file_uploader("Import CSV", type="csv")
-if uploaded and "csv_loaded" not in st.session_state:
-    df = pd.read_csv(uploaded)
-    df["tag"] = df["tag"].fillna("").astype(str)
-    df["is_secret"] = df["is_secret"].fillna(False).astype(bool)
-    expected_cols = {"from", "to", "chosen", "tag", "is_secret"}
-    for col in expected_cols:
-        if col not in df.columns:
-            df[col] = "" if col == "tag" else False
-    df["from"] = df["from"].astype(str)
-    df["to"] = df["to"].astype(str)
-    df["chosen"] = df["chosen"].astype(bool)
-    df["tag"] = df["tag"].fillna("").astype(str)
-    df["is_secret"] = df["is_secret"].fillna(False).astype(bool)
-
-    st.session_state.edges = df.to_dict(orient="records")
-    st.session_state.csv_loaded = True
-    st.rerun()
-
-# Clear flag after rerun
-if "csv_loaded" in st.session_state:
-    del st.session_state.csv_loaded
-
-# --- Sidebar: Add Path ---
+# --- Sidebar: Add New Path ---
 st.sidebar.header("Add Path")
-path_input = st.sidebar.text_input("Enter path (e.g. 123,4,10,200,400*)", key="path_input")
-tag_input = st.sidebar.text_input("Optional tag/comment", key="tag_input")
+path_input = st.sidebar.text_input("Enter path (e.g. 123,4,10,200,400*)")
+tag_input = st.sidebar.text_input("Optional tag/comment (e.g. got potion from wizard)")
 if st.sidebar.button("Add Path"):
-    parts = [p.strip() for p in st.session_state.path_input.split(",") if p.strip()]
-
+    parts = [p.strip() for p in path_input.split(",") if p.strip()]
     if len(parts) >= 2:
         from_page = parts[0]
         to_and_chosen = parts[1:]
-
         chosen = to_and_chosen[-1]
         to_pages = to_and_chosen[:-1]
 
@@ -62,18 +35,31 @@ if st.sidebar.button("Add Path"):
             "from": from_page,
             "to": chosen.replace("*", ""),
             "chosen": True,
-            "tag": st.session_state.tag_input.strip(),
+            "tag": tag_input.strip(),
             "is_secret": chosen.endswith("*")
         })
-
-        # Clear inputs and rerun
-        st.session_state.path_input = ""
-        st.session_state.tag_input = ""
-        st.rerun()
     else:
         st.warning("Please enter at least a from-page and a chosen path.")
 
-# --- Export CSV ---
+# --- Sidebar: Paste CSV Rows ---
+st.sidebar.markdown("---")
+st.sidebar.markdown("### 🖋️ Paste CSV Rows")
+pasted_rows = st.sidebar.text_area("Paste rows from graph_data.csv (no header)")
+if st.sidebar.button("Import Pasted Rows") and pasted_rows.strip():
+    for line in pasted_rows.strip().splitlines():
+        fields = [x.strip() for x in line.split(",")]
+        if len(fields) >= 5:
+            st.session_state.edges.append({
+                "from": fields[0],
+                "to": fields[1],
+                "chosen": fields[2].lower() == "true",
+                "tag": fields[3],
+                "is_secret": fields[4].lower() == "true"
+            })
+        else:
+            st.warning(f"Skipped malformed line: {line}")
+
+# --- Export ---
 st.sidebar.markdown("---")
 if st.sidebar.button("Export as CSV"):
     df = pd.DataFrame(st.session_state.edges)
@@ -82,46 +68,34 @@ if st.sidebar.button("Export as CSV"):
     df["chosen"] = df["chosen"].astype(bool)
     df["tag"] = df["tag"].fillna("").astype(str)
     df["is_secret"] = df["is_secret"].fillna(False).astype(bool)
-    csv = df.to_csv(index=False).encode("utf-8")
-    st.sidebar.download_button("\u2b07\ufe0f Download CSV", csv, "graph_data.csv", "text/csv")
 
-# --- Input Help ---
+    csv = df.to_csv(index=False).encode("utf-8")
+    st.sidebar.download_button("⬇️ Download CSV", csv, "graph_data.csv", "text/csv")
+
+# --- Input Format Help ---
 st.sidebar.markdown("---")
 st.sidebar.markdown("### ℹ️ Input Format Help")
 st.sidebar.markdown("""
-- Enter a **sequence of page numbers** separated by commas.
-- The **first number** is the current page you're on.
-- The **last number** is the **chosen destination page**.
-- All numbers **in between** are unchosen options from that page.
-- Add `*` to the last number to mark it as a **secret or hidden exit**.
-- You can optionally add a short **text tag** — this appears as a **tooltip** on the destination node.
-- Green lines show your **chosen path**.  
-  Dashed green lines indicate **secret paths**.
-- Arrows show directions of travel
-- Orange Nodes have not been explored further yet
+- Use `Add Path` for new journeys.
+- Paste rows like: `1,2,False,,False`
+- `from`, `to`, `chosen`, `tag`, `is_secret`
+- Green = chosen path, dashed = secret path
 """)
 
 # --- Build Graph ---
 net = Network(height="700px", width="100%", bgcolor="#111", font_color="white", directed=True)
 added_edges = set()
-from_nodes = set(edge["from"] for edge in st.session_state.edges)
+from_nodes = {edge["from"] for edge in st.session_state.edges}
+to_nodes = {edge["to"] for edge in st.session_state.edges}
+unexplored = to_nodes - from_nodes
 
 for edge in st.session_state.edges:
     edge_key = (edge["from"], edge["to"])
     if edge_key not in added_edges:
-        unexplored = edge["to"] not in from_nodes
-        node_color = "orange" if unexplored else None
-
-        if edge["from"] not in net.node_ids:
-            net.add_node(edge["from"], label=edge["from"])
-
-        if edge["to"] not in net.node_ids:
-            net.add_node(
-                edge["to"],
-                label=edge["to"],
-                title=edge["tag"] if edge["tag"] else "",
-                color=node_color
-            )
+        for node in [edge["from"], edge["to"]]:
+            if node not in net.node_ids:
+                color = "orange" if node in unexplored else None
+                net.add_node(node, label=node, title=node, color=color)
 
         net.add_edge(
             edge["from"],
