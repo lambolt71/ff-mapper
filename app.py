@@ -15,6 +15,8 @@ if "edges" not in st.session_state:
 uploaded = st.sidebar.file_uploader("Import CSV", type="csv")
 if uploaded and "csv_loaded" not in st.session_state:
     df = pd.read_csv(uploaded)
+    df["tag"] = df["tag"].fillna("").astype(str)
+    df["is_secret"] = df["is_secret"].fillna(False).astype(bool)
     expected_cols = {"from", "to", "chosen", "tag", "is_secret"}
     for col in expected_cols:
         if col not in df.columns:
