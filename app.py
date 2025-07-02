@@ -106,9 +106,8 @@ st.sidebar.markdown("""
 - The **last number** is the **chosen destination page**.
 - All numbers **in between** are unchosen options from that page.
 - Add `*` to the last number to mark it as a **secret or hidden exit**.
-- You can optionally add a short **text tag** — this appears as a **tooltip** on the destination node.
-- Green lines show your **chosen path**.  
-  Dashed green lines indicate **secret paths**.
+- You can optionally add a short **text tag** — this appears as a **tooltip** on the destination node.  
+  Dashed lines indicate **secret paths**.
 - Arrows show directions of travel
 - Orange Nodes have not been explored further yet
 """)
@@ -136,8 +135,8 @@ for edge in st.session_state.edges:
         net.add_edge(
             edge["from"],
             edge["to"],
-            color="lime" if edge["chosen"] else "gray",
-            width=3 if edge["chosen"] else 1,
+            color="gray",
+            width=2,
             title=edge["tag"] if edge["tag"] else "",
             dashes=edge.get("is_secret", False)
         )
