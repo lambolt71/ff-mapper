@@ -41,14 +41,15 @@ if st.sidebar.button("Add Path"):
     parts = [p.strip() for p in path_input.split(",") if p.strip()]
 
     if len(parts) >= 2:
-        from_page = parts[0].rstrip("*xt+s")
+        from_page_raw = parts[0]
+        from_page = from_page_raw.rstrip("*xt+s")
         for to_page in parts[1:]:
             clean_to = to_page.rstrip("*xt+s")
             edge_tag = ""
-            if "t" in to_page:
-                edge_tag = "End"
-            elif "+" in to_page:
+            if "+" in to_page:
                 edge_tag = "Required"
+            elif "t" in to_page:
+                edge_tag = "End"
             elif "x" in to_page:
                 edge_tag = "Dead"
             elif "s" in to_page:
@@ -60,6 +61,25 @@ if st.sidebar.button("Add Path"):
                 "chosen": True,
                 "tag": edge_tag,
                 "is_secret": "*" in to_page
+            })
+
+        # Also mark from_page if it has tag modifiers like +, x, t, s
+        from_tag = ""
+        if "+" in from_page_raw:
+            from_tag = "Required"
+        elif "t" in from_page_raw:
+            from_tag = "End"
+        elif "x" in from_page_raw:
+            from_tag = "Dead"
+        elif "s" in from_page_raw:
+            from_tag = "Start"
+        if from_tag:
+            st.session_state.edges.append({
+                "from": from_page,
+                "to": from_page,
+                "chosen": True,
+                "tag": from_tag,
+                "is_secret": "*" in from_page_raw
             })
     else:
         st.warning("Please enter at least a from-page and one destination.")
@@ -75,14 +95,15 @@ if st.sidebar.button("Add Pasted Paths"):
         parts = [p.strip() for p in line.split(",") if p.strip()]
         if len(parts) < 2:
             continue
-        from_page = parts[0].rstrip("*xt+s")
+        from_page_raw = parts[0]
+        from_page = from_page_raw.rstrip("*xt+s")
         for to_page in parts[1:]:
             clean_to = to_page.rstrip("*xt+s")
             edge_tag = ""
-            if "t" in to_page:
-                edge_tag = "End"
-            elif "+" in to_page:
+            if "+" in to_page:
                 edge_tag = "Required"
+            elif "t" in to_page:
+                edge_tag = "End"
             elif "x" in to_page:
                 edge_tag = "Dead"
             elif "s" in to_page:
@@ -93,6 +114,24 @@ if st.sidebar.button("Add Pasted Paths"):
                 "chosen": True,
                 "tag": edge_tag,
                 "is_secret": "*" in to_page
+            })
+
+        from_tag = ""
+        if "+" in from_page_raw:
+            from_tag = "Required"
+        elif "t" in from_page_raw:
+            from_tag = "End"
+        elif "x" in from_page_raw:
+            from_tag = "Dead"
+        elif "s" in from_page_raw:
+            from_tag = "Start"
+        if from_tag:
+            st.session_state.edges.append({
+                "from": from_page,
+                "to": from_page,
+                "chosen": True,
+                "tag": from_tag,
+                "is_secret": "*" in from_page_raw
             })
 
 # --- Export ---
