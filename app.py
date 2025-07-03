@@ -3,6 +3,7 @@ import networkx as nx
 from pyvis.network import Network
 import pandas as pd
 import os
+import matplotlib.pyplot as plt
 
 st.set_page_config(page_title="FF Graph Mapper", layout="wide")
 st.title("🗜︌ Fighting Fantasy Graph Builder")
@@ -200,3 +201,27 @@ net.write_html(net_path)
 with open(net_path, "r", encoding="utf-8") as f:
     html_string = f.read()
 st.components.v1.html(html_string, height=1000, scrolling=True)
+
+st.markdown("---")
+st.markdown("### 📷 Static Image Export")
+
+if st.button("Export Static Graph as PNG"):
+    G = nx.DiGraph()
+    for edge in st.session_state.edges:
+        G.add_edge(edge["from"], edge["to"])
+
+    pos = nx.spring_layout(G, seed=42)
+    plt.figure(figsize=(20, 15))
+    nx.draw(
+        G, pos, with_labels=True,
+        node_size=700, node_color="white",
+        edge_color="black", font_color="black", font_size=10,
+        arrows=True
+    )
+    plt.axis("off")
+    export_path = "static_ff_graph.png"
+    plt.savefig(export_path, dpi=300, bbox_inches='tight', facecolor="white")
+    st.image(export_path, caption="Static Graph Export (matplotlib)")
+    with open(export_path, "rb") as f:
+        st.download_button("⬇️ Download Static Image", f.read(), file_name="ff_graph.png", mime="image/png")
+
