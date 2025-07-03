@@ -45,7 +45,6 @@ if st.sidebar.button("Add Path"):
         from_page = from_page_raw.replace("+", "")
         to_and_chosen = parts[1:]
 
-        # In case user just entered two nodes: "258+,54"
         if len(to_and_chosen) == 1:
             chosen = to_and_chosen[0]
             to_pages = []
@@ -56,7 +55,6 @@ if st.sidebar.button("Add Path"):
         is_required = chosen.endswith("+") or from_page_raw.endswith("+")
         chosen_clean = chosen.replace("*", "").replace("x", "").replace("t", "").replace("+", "")
 
-        # Save skipped options
         for to_page in to_pages:
             st.session_state.edges.append({
                 "from": from_page,
@@ -66,7 +64,6 @@ if st.sidebar.button("Add Path"):
                 "is_secret": False
             })
 
-        # Save chosen path
         st.session_state.edges.append({
             "from": from_page,
             "to": chosen_clean,
@@ -76,7 +73,6 @@ if st.sidebar.button("Add Path"):
         })
     else:
         st.warning("Please enter at least a from-page and a chosen path.")
-
 
 # --- Paste in CSV-style data ---
 st.sidebar.markdown("---")
@@ -102,14 +98,15 @@ if st.sidebar.button("Add Pasted Paths"):
             continue
 
         if len(parts) >= 2:
-            from_page = parts[0]
+            from_page_raw = parts[0]
+            from_page = from_page_raw.replace("+", "")
             tag = parts[-1] if not parts[-1].isdigit() and not any(parts[-1].endswith(suffix) for suffix in ["*", "x", "t", "+"]) else ""
             dest_parts = parts[1:-1] if tag else parts[1:]
 
-            chosen = dest_parts[-1]
-            is_required = chosen.endswith("+")
+            chosen = dest_parts[-1] if dest_parts else ""
+            is_required = chosen.endswith("+") or from_page_raw.endswith("+")
             chosen_clean = chosen.replace("*", "").replace("x", "").replace("t", "").replace("+", "")
-            to_pages = dest_parts[:-1]
+            to_pages = dest_parts[:-1] if dest_parts else []
 
             for to_page in to_pages:
                 st.session_state.edges.append({
@@ -120,13 +117,14 @@ if st.sidebar.button("Add Pasted Paths"):
                     "is_secret": False
                 })
 
-            st.session_state.edges.append({
-                "from": from_page,
-                "to": chosen_clean,
-                "chosen": True,
-                "tag": "End" if chosen.endswith("t") else ("Required" if is_required else tag),
-                "is_secret": chosen.endswith("*")
-            })
+            if chosen_clean:
+                st.session_state.edges.append({
+                    "from": from_page,
+                    "to": chosen_clean,
+                    "chosen": True,
+                    "tag": "End" if chosen.endswith("t") else ("Required" if is_required else tag),
+                    "is_secret": chosen.endswith("*")
+                })
         else:
             st.warning(f"Invalid line skipped: {line}")
 
