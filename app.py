@@ -6,7 +6,11 @@ import os
 import matplotlib.pyplot as plt
 
 st.set_page_config(page_title="FF Graph Mapper", layout="wide")
-st.title("🗜︌ Fighting Fantasy Graph Builder")
+st.title("🕜ﾜ Fighting Fantasy Graph Builder")
+
+# ✅ Storage for user inputs must be initialized FIRST
+if "edges" not in st.session_state:
+    st.session_state.edges = []
 
 # Find shortest path from Start to End if both exist
 shortest_path_display = ""
