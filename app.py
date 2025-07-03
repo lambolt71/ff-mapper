@@ -55,19 +55,7 @@ if st.sidebar.button("Add Pasted Paths"):
         if not line.strip():
             continue
         parts = [p.strip() for p in line.split(",") if p.strip()]
-
-        if len(parts) == 1:
-            # Single-node dead end, e.g. "161x"
-            end = parts[0].replace("*", "").replace("x", "")
-            st.session_state.edges.append({
-                "from": end,
-                "to": end,
-                "chosen": True,
-                "tag": "",
-                "is_secret": False
-            })
-
-        elif len(parts) >= 2:
+        if len(parts) >= 2:
             from_page = parts[0]
             tag = parts[-1] if not parts[-1].isdigit() and not parts[-1].endswith("*") and not parts[-1].endswith("x") else ""
             dest_parts = parts[1:-1] if tag else parts[1:]
@@ -142,6 +130,9 @@ death_nodes = {
 }
 
 for edge in st.session_state.edges:
+    if edge["from"] == edge["to"]:
+        continue  # ✅ Skip self-loop edges used to indicate dead ends
+
     edge_key = (edge["from"], edge["to"])
     if edge_key not in added_edges:
         # From node
