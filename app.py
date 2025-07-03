@@ -125,6 +125,7 @@ st.sidebar.markdown("""
   Dashed lines indicate **secret paths**.
 - Arrows show directions of travel
 - Orange Nodes have not been explored further yet
+- Green Node is the **first page entered**
 """)
 
 # --- Build Graph ---
@@ -143,6 +144,9 @@ death_nodes = {
     if edge["from"] == edge["to"]
 }
 
+# Identify the first node used
+first_node = st.session_state.edges[0]["from"] if st.session_state.edges else None
+
 for edge in st.session_state.edges:
     if edge["from"] == edge["to"]:
         continue  # ✅ Skip self-loop edges used to indicate dead ends
@@ -151,7 +155,13 @@ for edge in st.session_state.edges:
     if edge_key not in added_edges:
         # From node
         if edge["from"] not in net.node_ids:
-            net.add_node(edge["from"], label=edge["from"], color="orange" if edge["from"] in unexplored else "#97C2FC")
+            if edge["from"] == first_node:
+                node_color = "green"
+            elif edge["from"] in unexplored:
+                node_color = "orange"
+            else:
+                node_color = "#97C2FC"
+            net.add_node(edge["from"], label=edge["from"], color=node_color)
 
         # To node
         node_color = "red" if edge["to"] in death_nodes else ("orange" if edge["to"] in unexplored else "#97C2FC")
@@ -171,6 +181,4 @@ for edge in st.session_state.edges:
 # --- Render Graph ---
 net_path = "graph.html"
 net.write_html(net_path)
-with open(net_path, "r", encoding="utf-8") as f:
-    html_string = f.read()
-st.components.v1.html(html_string, height=600, scrolling=True)
+with
