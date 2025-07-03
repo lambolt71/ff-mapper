@@ -260,3 +260,4 @@ if st.button("Export Static Graph as PNG"):
     st.image(export_path, caption="Static Graph Export (matplotlib)")
     with open(export_path, "rb") as f:
         st.download_button("⬇️ Download Static Image", f.read(), file_name="ff_graph.png", mime="image/png")
+
