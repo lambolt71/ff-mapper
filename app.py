@@ -6,7 +6,7 @@ import os
 import matplotlib.pyplot as plt
 
 st.set_page_config(page_title="FF Graph Mapper", layout="wide")
-st.title("🕜ﾚ Fighting Fantasy Graph Builder")
+st.title("🕜Ｚ Fighting Fantasy Graph Builder")
 
 # ✅ Storage for user inputs must be initialized FIRST
 if "edges" not in st.session_state:
@@ -21,7 +21,7 @@ if st.session_state.edges:
             G.add_edge(edge["from"], edge["to"])
 
     start_node = next((e["from"] for e in st.session_state.edges if e["to"] is not None), None)
-    end_nodes = [e["to"] for e in st.session_state.edges if e["tag"].lower() == "end"]
+    end_nodes = [e["to"] for e in st.session_state.edges if e["to"] is not None and e["tag"].lower() == "end"]
 
     if end_nodes:
         try:
@@ -44,6 +44,24 @@ if st.sidebar.button("Add Path"):
     if len(parts) >= 2:
         from_page_raw = parts[0]
         from_page = from_page_raw.rstrip("*xt+s")
+        from_tag = ""
+        if "+" in from_page_raw:
+            from_tag = "Required"
+        elif "t" in from_page_raw:
+            from_tag = "End"
+        elif "x" in from_page_raw:
+            from_tag = "Dead"
+        elif "s" in from_page_raw:
+            from_tag = "Start"
+        if from_tag:
+            st.session_state.edges.append({
+                "from": from_page,
+                "to": None,
+                "chosen": False,
+                "tag": from_tag,
+                "is_secret": "*" in from_page_raw
+            })
+
         for to_page in parts[1:]:
             clean_to = to_page.rstrip("*xt+s")
             edge_tag = ""
@@ -62,25 +80,6 @@ if st.sidebar.button("Add Path"):
                 "chosen": True,
                 "tag": edge_tag,
                 "is_secret": "*" in to_page
-            })
-
-        # Only store from-page node tag for rendering purposes (no edge added)
-        from_tag = ""
-        if "+" in from_page_raw:
-            from_tag = "Required"
-        elif "t" in from_page_raw:
-            from_tag = "End"
-        elif "x" in from_page_raw:
-            from_tag = "Dead"
-        elif "s" in from_page_raw:
-            from_tag = "Start"
-        if from_tag:
-            st.session_state.edges.append({
-                "from": from_page,
-                "to": None,
-                "chosen": False,
-                "tag": from_tag,
-                "is_secret": "*" in from_page_raw
             })
     else:
         st.warning("Please enter at least a from-page and one destination.")
@@ -98,6 +97,24 @@ if st.sidebar.button("Add Pasted Paths"):
             continue
         from_page_raw = parts[0]
         from_page = from_page_raw.rstrip("*xt+s")
+        from_tag = ""
+        if "+" in from_page_raw:
+            from_tag = "Required"
+        elif "t" in from_page_raw:
+            from_tag = "End"
+        elif "x" in from_page_raw:
+            from_tag = "Dead"
+        elif "s" in from_page_raw:
+            from_tag = "Start"
+        if from_tag:
+            st.session_state.edges.append({
+                "from": from_page,
+                "to": None,
+                "chosen": False,
+                "tag": from_tag,
+                "is_secret": "*" in from_page_raw
+            })
+
         for to_page in parts[1:]:
             clean_to = to_page.rstrip("*xt+s")
             edge_tag = ""
@@ -115,24 +132,6 @@ if st.sidebar.button("Add Pasted Paths"):
                 "chosen": True,
                 "tag": edge_tag,
                 "is_secret": "*" in to_page
-            })
-
-        from_tag = ""
-        if "+" in from_page_raw:
-            from_tag = "Required"
-        elif "t" in from_page_raw:
-            from_tag = "End"
-        elif "x" in from_page_raw:
-            from_tag = "Dead"
-        elif "s" in from_page_raw:
-            from_tag = "Start"
-        if from_tag:
-            st.session_state.edges.append({
-                "from": from_page,
-                "to": None,
-                "chosen": False,
-                "tag": from_tag,
-                "is_secret": "*" in from_page_raw
             })
 
 # --- Export ---
@@ -170,7 +169,6 @@ first_node = next((e["from"] for e in st.session_state.edges if e["to"] is not N
 
 node_tags = {}
 for edge in st.session_state.edges:
-    # Assign tag to both 'from' and 'to' for display purposes
     for node in [edge["from"], edge["to"]]:
         if node is not None:
             if node not in node_tags:
@@ -243,4 +241,3 @@ if st.button("Export Static Graph as PNG"):
     st.image(export_path, caption="Static Graph Export (matplotlib)")
     with open(export_path, "rb") as f:
         st.download_button("⬇️ Download Static Image", f.read(), file_name="ff_graph.png", mime="image/png")
-
