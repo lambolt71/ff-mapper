@@ -36,18 +36,27 @@ if st.session_state.edges:
 st.sidebar.header("Add Path")
 path_input = st.sidebar.text_input("Enter path (e.g. 123,4,10,200,400*)")
 tag_input = st.sidebar.text_input("Optional tag/comment (e.g. got potion from wizard)")
+
 if st.sidebar.button("Add Path"):
     parts = [p.strip() for p in path_input.split(",") if p.strip()]
 
     if len(parts) >= 2:
-        from_page = parts[0]
+        from_page_raw = parts[0]
+        from_page = from_page_raw.replace("+", "")
         to_and_chosen = parts[1:]
 
-        chosen = to_and_chosen[-1]
-        is_required = chosen.endswith("+")
-        chosen_clean = chosen.replace("*", "").replace("x", "").replace("t", "").replace("+", "")
-        to_pages = to_and_chosen[:-1]
+        # In case user just entered two nodes: "258+,54"
+        if len(to_and_chosen) == 1:
+            chosen = to_and_chosen[0]
+            to_pages = []
+        else:
+            chosen = to_and_chosen[-1]
+            to_pages = to_and_chosen[:-1]
 
+        is_required = chosen.endswith("+") or from_page_raw.endswith("+")
+        chosen_clean = chosen.replace("*", "").replace("x", "").replace("t", "").replace("+", "")
+
+        # Save skipped options
         for to_page in to_pages:
             st.session_state.edges.append({
                 "from": from_page,
@@ -57,6 +66,7 @@ if st.sidebar.button("Add Path"):
                 "is_secret": False
             })
 
+        # Save chosen path
         st.session_state.edges.append({
             "from": from_page,
             "to": chosen_clean,
@@ -66,6 +76,7 @@ if st.sidebar.button("Add Path"):
         })
     else:
         st.warning("Please enter at least a from-page and a chosen path.")
+
 
 # --- Paste in CSV-style data ---
 st.sidebar.markdown("---")
