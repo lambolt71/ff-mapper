@@ -17,9 +17,10 @@ shortest_path_display = ""
 if st.session_state.edges:
     G = nx.DiGraph()
     for edge in st.session_state.edges:
-        G.add_edge(edge["from"], edge["to"])
+        if edge["to"] is not None:
+            G.add_edge(edge["from"], edge["to"])
 
-    start_node = st.session_state.edges[0]["from"]
+    start_node = next((e["from"] for e in st.session_state.edges if e["to"] is not None), None)
     end_nodes = [e["to"] for e in st.session_state.edges if e["tag"].lower() == "end"]
 
     if end_nodes:
@@ -165,12 +166,17 @@ added_edges = set()
 all_from = set(edge["from"] for edge in st.session_state.edges if edge["to"] is not None)
 all_to = set(edge["to"] for edge in st.session_state.edges if edge["to"] is not None)
 unexplored = all_to - all_from
-death_nodes = {edge["to"] for edge in st.session_state.edges if edge["tag"] == "Dead"}
 first_node = next((e["from"] for e in st.session_state.edges if e["to"] is not None), None)
 
 node_tags = {}
 for edge in st.session_state.edges:
-    for node in [edge["from"]] + ([edge["to"]] if edge["to"] is not None else []):
+    if edge["to"] is None:
+        node = edge["from"]
+        if node not in node_tags:
+            node_tags[node] = set()
+        node_tags[node].add(edge["tag"])
+    else:
+        node = edge["to"]
         if node not in node_tags:
             node_tags[node] = set()
         node_tags[node].add(edge["tag"])
