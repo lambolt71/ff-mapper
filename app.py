@@ -170,16 +170,13 @@ first_node = next((e["from"] for e in st.session_state.edges if e["to"] is not N
 
 node_tags = {}
 for edge in st.session_state.edges:
-    if edge["to"] is None:
-        node = edge["from"]
-        if node not in node_tags:
-            node_tags[node] = set()
-        node_tags[node].add(edge["tag"])
-    else:
-        node = edge["to"]
-        if node not in node_tags:
-            node_tags[node] = set()
-        node_tags[node].add(edge["tag"])
+    # Assign tag to both 'from' and 'to' for display purposes
+    for node in [edge["from"], edge["to"]]:
+        if node is not None:
+            if node not in node_tags:
+                node_tags[node] = set()
+            if edge["tag"]:
+                node_tags[node].add(edge["tag"])
 
 for edge in st.session_state.edges:
     edge_key = (edge["from"], edge["to"])
