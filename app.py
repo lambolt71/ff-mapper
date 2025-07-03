@@ -130,7 +130,7 @@ st.sidebar.markdown("""
 """)
 
 # --- Build Graph ---
-net = Network(height="90vh", width="100%", bgcolor="#111", font_color="white", directed=True)
+net = Network(height="1000", width="100%", bgcolor="#111", font_color="white", directed=True)
 added_edges = set()
 
 # Determine which nodes are unexplored
@@ -199,4 +199,4 @@ net_path = "graph.html"
 net.write_html(net_path)
 with open(net_path, "r", encoding="utf-8") as f:
     html_string = f.read()
-st.components.v1.html(html_string, height=600, scrolling=True)
+st.components.v1.html(html_string, height=1000, scrolling=True)
