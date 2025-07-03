@@ -130,7 +130,7 @@ st.sidebar.markdown("""
 """)
 
 # --- Build Graph ---
-net = Network(height="1000", width="100%", bgcolor="#111", font_color="white", directed=True)
+net = Network(height="1000px", width="100%", bgcolor="#111", font_color="white", directed=True)
 added_edges = set()
 
 # Determine which nodes are unexplored
