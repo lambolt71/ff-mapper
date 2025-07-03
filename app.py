@@ -54,7 +54,21 @@ if st.sidebar.button("Add Pasted Paths"):
     for line in pasted_data.splitlines():
         if not line.strip():
             continue
+
         parts = [p.strip() for p in line.split(",") if p.strip()]
+
+        # Handle single dead-end like "64x"
+        if len(parts) == 1 and parts[0].endswith("x"):
+            node = parts[0].replace("x", "")
+            st.session_state.edges.append({
+                "from": node,
+                "to": node,
+                "chosen": True,
+                "tag": "",
+                "is_secret": False
+            })
+            continue
+
         if len(parts) >= 2:
             from_page = parts[0]
             tag = parts[-1] if not parts[-1].isdigit() and not parts[-1].endswith("*") and not parts[-1].endswith("x") else ""
