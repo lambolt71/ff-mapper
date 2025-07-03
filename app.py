@@ -162,45 +162,48 @@ st.sidebar.markdown("""
 # --- Build Graph ---
 net = Network(height="1000px", width="100%", bgcolor="#111", font_color="white", directed=True)
 added_edges = set()
-all_from = set(edge["from"] for edge in st.session_state.edges if edge["to"] is not None)
-all_to = set(edge["to"] for edge in st.session_state.edges if edge["to"] is not None)
-unexplored = all_to - all_from
-first_node = next((e["from"] for e in st.session_state.edges if e["to"] is not None), None)
-
+all_nodes = set()
 node_tags = {}
+
 for edge in st.session_state.edges:
     for node in [edge["from"], edge["to"]]:
         if node is not None:
+            all_nodes.add(node)
             if node not in node_tags:
                 node_tags[node] = set()
             if edge["tag"]:
                 node_tags[node].add(edge["tag"])
 
+all_from = set(edge["from"] for edge in st.session_state.edges if edge["to"] is not None)
+all_to = set(edge["to"] for edge in st.session_state.edges if edge["to"] is not None)
+unexplored = all_to - all_from
+first_node = next((e["from"] for e in st.session_state.edges if e["to"] is not None), None)
+
+for node in all_nodes:
+    if node not in net.node_ids:
+        color = "#97C2FC"
+        title = ""
+        tags = node_tags.get(node, set())
+        if "Dead" in tags:
+            color = "red"
+            title = "Dead End"
+        elif "End" in tags:
+            color = "#00cc88"
+            title = "End"
+        elif "Required" in tags:
+            color = "yellow"
+            title = "Required"
+        elif "Start" in tags or node == first_node:
+            color = "#007733"
+            title = "Start"
+        elif node in unexplored:
+            color = "orange"
+
+        net.add_node(node, label=node, color=color, title=title)
+
 for edge in st.session_state.edges:
     edge_key = (edge["from"], edge["to"])
     if edge["to"] is not None and edge_key not in added_edges:
-        for node in [edge["from"], edge["to"]]:
-            if node not in net.node_ids:
-                color = "#97C2FC"
-                title = ""
-                tags = node_tags.get(node, set())
-                if "Dead" in tags:
-                    color = "red"
-                    title = "Dead End"
-                elif "End" in tags:
-                    color = "#00cc88"
-                    title = "End"
-                elif "Required" in tags:
-                    color = "yellow"
-                    title = "Required"
-                elif "Start" in tags or node == first_node:
-                    color = "#007733"
-                    title = "Start"
-                elif node in unexplored:
-                    color = "orange"
-
-                net.add_node(node, label=node, color=color, title=title)
-
         net.add_edge(
             edge["from"],
             edge["to"],
