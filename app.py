@@ -6,7 +6,7 @@ import os
 import matplotlib.pyplot as plt
 
 st.set_page_config(page_title="FF Graph Mapper", layout="wide")
-st.title("🕜ﾜ Fighting Fantasy Graph Builder")
+st.title("🕜ﾚ Fighting Fantasy Graph Builder")
 
 # ✅ Storage for user inputs must be initialized FIRST
 if "edges" not in st.session_state:
@@ -76,7 +76,7 @@ if st.sidebar.button("Add Path"):
 
 # --- Paste in CSV-style data ---
 st.sidebar.markdown("---")
-st.sidebar.markdown("### 📋 Paste Data from CSV")
+st.sidebar.markdown("### 📜 Paste Data from CSV")
 pasted_data = st.sidebar.text_area("Paste rows like: 123,4,5,6,200*,Got key")
 if st.sidebar.button("Add Pasted Paths"):
     for line in pasted_data.splitlines():
@@ -167,6 +167,9 @@ unexplored = all_to - all_from
 death_nodes = {edge["to"] for edge in st.session_state.edges if edge["from"] == edge["to"]}
 first_node = st.session_state.edges[0]["from"] if st.session_state.edges else None
 
+# Collect nodes with "Required" tag
+required_nodes = set(edge["to"] for edge in st.session_state.edges if edge["tag"].lower() == "required")
+
 for edge in st.session_state.edges:
     if edge["from"] == edge["to"]:
         continue
@@ -180,6 +183,9 @@ for edge in st.session_state.edges:
             elif edge["from"] in unexplored:
                 node_color = "orange"
                 node_title = ""
+            elif edge["from"] in required_nodes:
+                node_color = "yellow"
+                node_title = "Required"
             else:
                 node_color = "#97C2FC"
                 node_title = ""
@@ -191,7 +197,7 @@ for edge in st.session_state.edges:
         elif edge["tag"].lower() == "end":
             node_color = "#00cc88"
             node_title = "End"
-        elif edge["tag"].lower() == "required":
+        elif edge["tag"].lower() == "required" or edge["to"] in required_nodes:
             node_color = "yellow"
             node_title = "Required"
         elif edge["to"] in unexplored:
