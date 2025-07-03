@@ -32,11 +32,6 @@ if st.session_state.edges:
     else:
         st.markdown("**Shortest Path:** End node not defined.")
 
-
-# Storage for user inputs
-if "edges" not in st.session_state:
-    st.session_state.edges = []
-
 # --- Sidebar: Add New Path ---
 st.sidebar.header("Add Path")
 path_input = st.sidebar.text_input("Enter path (e.g. 123,4,10,200,400*)")
@@ -49,9 +44,10 @@ if st.sidebar.button("Add Path"):
         to_and_chosen = parts[1:]
 
         chosen = to_and_chosen[-1]
+        is_required = chosen.endswith("+")
+        chosen_clean = chosen.replace("*", "").replace("x", "").replace("t", "").replace("+", "")
         to_pages = to_and_chosen[:-1]
 
-        # Save skipped options
         for to_page in to_pages:
             st.session_state.edges.append({
                 "from": from_page,
@@ -61,12 +57,11 @@ if st.sidebar.button("Add Path"):
                 "is_secret": False
             })
 
-        # Save chosen path
         st.session_state.edges.append({
             "from": from_page,
-            "to": chosen.replace("*", "").replace("x", "").replace("t", ""),
+            "to": chosen_clean,
             "chosen": True,
-            "tag": "End" if chosen.endswith("t") else tag_input.strip(),
+            "tag": "End" if chosen.endswith("t") else ("Required" if is_required else tag_input.strip()),
             "is_secret": chosen.endswith("*")
         })
     else:
@@ -83,24 +78,26 @@ if st.sidebar.button("Add Pasted Paths"):
 
         parts = [p.strip() for p in line.split(",") if p.strip()]
 
-        # Handle single dead-end like "64x"
-        if len(parts) == 1 and (parts[0].endswith("x") or parts[0].endswith("t")):
-            node = parts[0].replace("x", "").replace("t", "")
+        if len(parts) == 1 and (parts[0].endswith("x") or parts[0].endswith("t") or parts[0].endswith("+")):
+            node = parts[0].replace("x", "").replace("t", "").replace("+", "")
+            tag = "End" if parts[0].endswith("t") else ("Required" if parts[0].endswith("+") else "")
             st.session_state.edges.append({
                 "from": node,
                 "to": node,
                 "chosen": True,
-                "tag": "End" if parts[0].endswith("t") else "",
+                "tag": tag,
                 "is_secret": False
             })
-            continue 
+            continue
 
         if len(parts) >= 2:
             from_page = parts[0]
-            tag = parts[-1] if not parts[-1].isdigit() and not parts[-1].endswith("*") and not parts[-1].endswith("x") and not parts[-1].endswith("t") else ""
+            tag = parts[-1] if not parts[-1].isdigit() and not any(parts[-1].endswith(suffix) for suffix in ["*", "x", "t", "+"]) else ""
             dest_parts = parts[1:-1] if tag else parts[1:]
 
             chosen = dest_parts[-1]
+            is_required = chosen.endswith("+")
+            chosen_clean = chosen.replace("*", "").replace("x", "").replace("t", "").replace("+", "")
             to_pages = dest_parts[:-1]
 
             for to_page in to_pages:
@@ -114,9 +111,9 @@ if st.sidebar.button("Add Pasted Paths"):
 
             st.session_state.edges.append({
                 "from": from_page,
-                "to": chosen.replace("*", "").replace("x", "").replace("t", ""),
+                "to": chosen_clean,
                 "chosen": True,
-                "tag": "End" if chosen.endswith("t") else tag,
+                "tag": "End" if chosen.endswith("t") else ("Required" if is_required else tag),
                 "is_secret": chosen.endswith("*")
             })
         else:
@@ -126,14 +123,11 @@ if st.sidebar.button("Add Pasted Paths"):
 st.sidebar.markdown("---")
 if st.sidebar.button("Export as CSV"):
     df = pd.DataFrame(st.session_state.edges)
-
-    # Clean and ensure types
     df["from"] = df["from"].astype(str)
     df["to"] = df["to"].astype(str)
     df["chosen"] = df["chosen"].astype(bool)
     df["tag"] = df["tag"].fillna("").astype(str)
     df["is_secret"] = df["is_secret"].fillna(False).astype(bool)
-
     csv = df.to_csv(index=False).encode("utf-8")
     st.sidebar.download_button("⬇️ Download CSV", csv, "graph_data.csv", "text/csv")
 
@@ -147,43 +141,32 @@ st.sidebar.markdown("""
 - All numbers **in between** are unchosen options from that page.
 - Add * to the last number to mark it as a **secret or hidden exit**.
 - Add x to the last number to mark it as a **dead end** — the node will turn **red**.
-- Add t to the last number to mark it as a **final target** — the node will turn **green** and say **End**.
-- You can optionally add a short **text tag** — this appears as a **tooltip** on the destination node.  
-  Dashed lines indicate **secret paths**.
+- Add t to the last number to mark it as a **final target** — the node will turn **light green** and say **End**.
+- Add + to the last number to mark it as a **required location** — the node will turn **yellow**.
+- You can optionally add a short **text tag** — this appears as a **tooltip** on the destination node.
 - Arrows show directions of travel
 - Orange Nodes have not been explored further yet
-- Green Node is the **first page entered**, and End is marked **green** too.
+- Green Node is the **first page entered**, and End is marked **light green** too.
 """)
 
 # --- Build Graph ---
 net = Network(height="1000px", width="100%", bgcolor="#111", font_color="white", directed=True)
 added_edges = set()
-
-# Determine which nodes are unexplored
 all_from = set(edge["from"] for edge in st.session_state.edges)
 all_to = set(edge["to"] for edge in st.session_state.edges)
 unexplored = all_to - all_from
-
-# Re-detect death nodes as nodes that only point to themselves
-death_nodes = {
-    edge["to"]
-    for edge in st.session_state.edges
-    if edge["from"] == edge["to"]
-}
-
-# Identify the first node used
+death_nodes = {edge["to"] for edge in st.session_state.edges if edge["from"] == edge["to"]}
 first_node = st.session_state.edges[0]["from"] if st.session_state.edges else None
 
 for edge in st.session_state.edges:
     if edge["from"] == edge["to"]:
-        continue  # ✅ Skip self-loop edges used to indicate dead ends
+        continue
 
     edge_key = (edge["from"], edge["to"])
     if edge_key not in added_edges:
-        # From node
         if edge["from"] not in net.node_ids:
             if edge["from"] == first_node:
-                node_color = "green"
+                node_color = "#007733"
                 node_title = "Start"
             elif edge["from"] in unexplored:
                 node_color = "orange"
@@ -193,16 +176,18 @@ for edge in st.session_state.edges:
                 node_title = ""
             net.add_node(edge["from"], label=edge["from"], color=node_color, title=node_title)
 
-        # To node
         if edge["to"] in death_nodes:
             node_color = "red"
             node_title = "Dead End"
+        elif edge["tag"].lower() == "end":
+            node_color = "#00cc88"
+            node_title = "End"
+        elif edge["tag"].lower() == "required":
+            node_color = "yellow"
+            node_title = "Required"
         elif edge["to"] in unexplored:
             node_color = "orange"
             node_title = edge["tag"]
-        elif edge["tag"].lower() == "end":
-            node_color = "green"
-            node_title = "End"
         else:
             node_color = "#97C2FC"
             node_title = edge["tag"]
