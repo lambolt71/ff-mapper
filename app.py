@@ -55,6 +55,16 @@ if st.sidebar.button("Add Path"):
         is_required = chosen.endswith("+") or from_page_raw.endswith("+")
         chosen_clean = chosen.replace("*", "").replace("x", "").replace("t", "").replace("+", "")
 
+        # Mark required source node with a self-loop if applicable
+        if from_page_raw.endswith("+"):
+            st.session_state.edges.append({
+                "from": from_page,
+                "to": from_page,
+                "chosen": True,
+                "tag": "Required",
+                "is_secret": False
+            })
+
         for to_page in to_pages:
             st.session_state.edges.append({
                 "from": from_page,
@@ -107,6 +117,15 @@ if st.sidebar.button("Add Pasted Paths"):
             is_required = chosen.endswith("+") or from_page_raw.endswith("+")
             chosen_clean = chosen.replace("*", "").replace("x", "").replace("t", "").replace("+", "")
             to_pages = dest_parts[:-1] if dest_parts else []
+
+            if from_page_raw.endswith("+"):
+                st.session_state.edges.append({
+                    "from": from_page,
+                    "to": from_page,
+                    "chosen": True,
+                    "tag": "Required",
+                    "is_secret": False
+                })
 
             for to_page in to_pages:
                 st.session_state.edges.append({
@@ -169,6 +188,7 @@ first_node = st.session_state.edges[0]["from"] if st.session_state.edges else No
 
 # Collect nodes with "Required" tag
 required_nodes = set(edge["to"] for edge in st.session_state.edges if edge["tag"].lower() == "required")
+required_nodes |= set(edge["from"] for edge in st.session_state.edges if edge["tag"].lower() == "required")
 
 for edge in st.session_state.edges:
     if edge["from"] == edge["to"]:
