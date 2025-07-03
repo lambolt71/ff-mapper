@@ -55,7 +55,19 @@ if st.sidebar.button("Add Pasted Paths"):
         if not line.strip():
             continue
         parts = [p.strip() for p in line.split(",") if p.strip()]
-        if len(parts) >= 2:
+
+        if len(parts) == 1:
+            # Single-node dead end, e.g. "161x"
+            end = parts[0].replace("*", "").replace("x", "")
+            st.session_state.edges.append({
+                "from": end,
+                "to": end,
+                "chosen": True,
+                "tag": "",
+                "is_secret": False
+            })
+
+        elif len(parts) >= 2:
             from_page = parts[0]
             tag = parts[-1] if not parts[-1].isdigit() and not parts[-1].endswith("*") and not parts[-1].endswith("x") else ""
             dest_parts = parts[1:-1] if tag else parts[1:]
@@ -111,7 +123,6 @@ st.sidebar.markdown("""
   Dashed lines indicate **secret paths**.
 - Arrows show directions of travel
 - Orange Nodes have not been explored further yet
-- Red Nodes are dead ends (or deaths)
 """)
 
 # --- Build Graph ---
@@ -123,11 +134,12 @@ all_from = set(edge["from"] for edge in st.session_state.edges)
 all_to = set(edge["to"] for edge in st.session_state.edges)
 unexplored = all_to - all_from
 
-death_nodes = set(
+# Re-detect death nodes as nodes that only point to themselves
+death_nodes = {
     edge["to"]
     for edge in st.session_state.edges
-    if edge["to"] != edge["from"] and edge["to"].endswith("x")
-)
+    if edge["from"] == edge["to"]
+}
 
 for edge in st.session_state.edges:
     edge_key = (edge["from"], edge["to"])
