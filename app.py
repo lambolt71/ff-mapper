@@ -38,7 +38,7 @@ if st.sidebar.button("Add Path"):
         # Save chosen path
         st.session_state.edges.append({
             "from": from_page,
-            "to": chosen.replace("*", ""),
+            "to": chosen.replace("*", "").replace("x", ""),
             "chosen": True,
             "tag": tag_input.strip(),
             "is_secret": chosen.endswith("*")
@@ -57,7 +57,7 @@ if st.sidebar.button("Add Pasted Paths"):
         parts = [p.strip() for p in line.split(",") if p.strip()]
         if len(parts) >= 2:
             from_page = parts[0]
-            tag = parts[-1] if not parts[-1].isdigit() and not parts[-1].endswith("*") else ""
+            tag = parts[-1] if not parts[-1].isdigit() and not parts[-1].endswith("*") and not parts[-1].endswith("x") else ""
             dest_parts = parts[1:-1] if tag else parts[1:]
 
             chosen = dest_parts[-1]
@@ -74,7 +74,7 @@ if st.sidebar.button("Add Pasted Paths"):
 
             st.session_state.edges.append({
                 "from": from_page,
-                "to": chosen.replace("*", ""),
+                "to": chosen.replace("*", "").replace("x", ""),
                 "chosen": True,
                 "tag": tag,
                 "is_secret": chosen.endswith("*")
@@ -106,10 +106,12 @@ st.sidebar.markdown("""
 - The **last number** is the **chosen destination page**.
 - All numbers **in between** are unchosen options from that page.
 - Add `*` to the last number to mark it as a **secret or hidden exit**.
+- Add `x` to the last number to mark it as a **dead end** — the node will turn **red**.
 - You can optionally add a short **text tag** — this appears as a **tooltip** on the destination node.  
   Dashed lines indicate **secret paths**.
 - Arrows show directions of travel
 - Orange Nodes have not been explored further yet
+- Red Nodes are dead ends (or deaths)
 """)
 
 # --- Build Graph ---
@@ -121,6 +123,12 @@ all_from = set(edge["from"] for edge in st.session_state.edges)
 all_to = set(edge["to"] for edge in st.session_state.edges)
 unexplored = all_to - all_from
 
+death_nodes = set(
+    edge["to"]
+    for edge in st.session_state.edges
+    if edge["to"] != edge["from"] and edge["to"].endswith("x")
+)
+
 for edge in st.session_state.edges:
     edge_key = (edge["from"], edge["to"])
     if edge_key not in added_edges:
@@ -129,8 +137,9 @@ for edge in st.session_state.edges:
             net.add_node(edge["from"], label=edge["from"], color="orange" if edge["from"] in unexplored else "#97C2FC")
 
         # To node
+        node_color = "red" if edge["to"] in death_nodes else ("orange" if edge["to"] in unexplored else "#97C2FC")
         if edge["to"] not in net.node_ids:
-            net.add_node(edge["to"], label=edge["to"], title=edge["tag"] if edge["tag"] else "", color="orange" if edge["to"] in unexplored else "#97C2FC")
+            net.add_node(edge["to"], label=edge["to"], title=edge["tag"] if edge["tag"] else "", color=node_color)
 
         net.add_edge(
             edge["from"],
@@ -147,4 +156,4 @@ net_path = "graph.html"
 net.write_html(net_path)
 with open(net_path, "r", encoding="utf-8") as f:
     html_string = f.read()
-st.components.v1.html(html_string, height=600, scrolling=True)
+st.components.v1.html(html_string, height=600, scrol
