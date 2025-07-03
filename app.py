@@ -6,7 +6,7 @@ import os
 import matplotlib.pyplot as plt
 
 st.set_page_config(page_title="FF Graph Mapper", layout="wide")
-st.title("🕜ﾜ Fighting Fantasy Graph Builder")
+st.title("🗜︌ Fighting Fantasy Graph Builder")
 
 # Find shortest path from Start to End if both exist
 shortest_path_display = ""
@@ -141,9 +141,9 @@ st.sidebar.markdown("""
 - The **first number** is the current page you're on.
 - The **last number** is the **chosen destination page**.
 - All numbers **in between** are unchosen options from that page.
-- Add `*` to the last number to mark it as a **secret or hidden exit**.
-- Add `x` to the last number to mark it as a **dead end** — the node will turn **red**.
-- Add `t` to the last number to mark it as a **final target** — the node will turn **green** and say **End**.
+- Add * to the last number to mark it as a **secret or hidden exit**.
+- Add x to the last number to mark it as a **dead end** — the node will turn **red**.
+- Add t to the last number to mark it as a **final target** — the node will turn **green** and say **End**.
 - You can optionally add a short **text tag** — this appears as a **tooltip** on the destination node.  
   Dashed lines indicate **secret paths**.
 - Arrows show directions of travel
