@@ -41,48 +41,28 @@ if st.sidebar.button("Add Path"):
     parts = [p.strip() for p in path_input.split(",") if p.strip()]
 
     if len(parts) >= 2:
-        from_page_raw = parts[0]
-        from_page = from_page_raw.replace("+", "")
-        to_and_chosen = parts[1:]
+        from_page = parts[0]
+        for to_page in parts[1:]:
+            clean_to = to_page.rstrip("*xt+s")
+            edge_tag = ""
+            if "t" in to_page:
+                edge_tag = "End"
+            elif "+" in to_page:
+                edge_tag = "Required"
+            elif "x" in to_page:
+                edge_tag = "Dead"
+            elif "s" in to_page:
+                edge_tag = "Start"
 
-        if len(to_and_chosen) == 1:
-            chosen = to_and_chosen[0]
-            to_pages = []
-        else:
-            chosen = to_and_chosen[-1]
-            to_pages = to_and_chosen[:-1]
-
-        is_required = chosen.endswith("+") or from_page_raw.endswith("+")
-        chosen_clean = chosen.replace("*", "").replace("x", "").replace("t", "").replace("+", "")
-
-        # Mark required source node with a self-loop if applicable
-        if from_page_raw.endswith("+"):
             st.session_state.edges.append({
                 "from": from_page,
-                "to": from_page,
+                "to": clean_to,
                 "chosen": True,
-                "tag": "Required",
-                "is_secret": False
+                "tag": edge_tag,
+                "is_secret": "*" in to_page
             })
-
-        for to_page in to_pages:
-            st.session_state.edges.append({
-                "from": from_page,
-                "to": to_page,
-                "chosen": False,
-                "tag": "",
-                "is_secret": False
-            })
-
-        st.session_state.edges.append({
-            "from": from_page,
-            "to": chosen_clean,
-            "chosen": True,
-            "tag": "End" if chosen.endswith("t") else ("Required" if is_required else tag_input.strip()),
-            "is_secret": chosen.endswith("*")
-        })
     else:
-        st.warning("Please enter at least a from-page and a chosen path.")
+        st.warning("Please enter at least a from-page and one destination.")
 
 # --- Paste in CSV-style data ---
 st.sidebar.markdown("---")
@@ -92,60 +72,28 @@ if st.sidebar.button("Add Pasted Paths"):
     for line in pasted_data.splitlines():
         if not line.strip():
             continue
-
         parts = [p.strip() for p in line.split(",") if p.strip()]
-
-        if len(parts) == 1 and (parts[0].endswith("x") or parts[0].endswith("t") or parts[0].endswith("+")):
-            node = parts[0].replace("x", "").replace("t", "").replace("+", "")
-            tag = "End" if parts[0].endswith("t") else ("Required" if parts[0].endswith("+") else "")
-            st.session_state.edges.append({
-                "from": node,
-                "to": node,
-                "chosen": True,
-                "tag": tag,
-                "is_secret": False
-            })
+        if len(parts) < 2:
             continue
-
-        if len(parts) >= 2:
-            from_page_raw = parts[0]
-            from_page = from_page_raw.replace("+", "")
-            tag = parts[-1] if not parts[-1].isdigit() and not any(parts[-1].endswith(suffix) for suffix in ["*", "x", "t", "+"]) else ""
-            dest_parts = parts[1:-1] if tag else parts[1:]
-
-            chosen = dest_parts[-1] if dest_parts else ""
-            is_required = chosen.endswith("+") or from_page_raw.endswith("+")
-            chosen_clean = chosen.replace("*", "").replace("x", "").replace("t", "").replace("+", "")
-            to_pages = dest_parts[:-1] if dest_parts else []
-
-            if from_page_raw.endswith("+"):
-                st.session_state.edges.append({
-                    "from": from_page,
-                    "to": from_page,
-                    "chosen": True,
-                    "tag": "Required",
-                    "is_secret": False
-                })
-
-            for to_page in to_pages:
-                st.session_state.edges.append({
-                    "from": from_page,
-                    "to": to_page,
-                    "chosen": False,
-                    "tag": "",
-                    "is_secret": False
-                })
-
-            if chosen_clean:
-                st.session_state.edges.append({
-                    "from": from_page,
-                    "to": chosen_clean,
-                    "chosen": True,
-                    "tag": "End" if chosen.endswith("t") else ("Required" if is_required else tag),
-                    "is_secret": chosen.endswith("*")
-                })
-        else:
-            st.warning(f"Invalid line skipped: {line}")
+        from_page = parts[0]
+        for to_page in parts[1:]:
+            clean_to = to_page.rstrip("*xt+s")
+            edge_tag = ""
+            if "t" in to_page:
+                edge_tag = "End"
+            elif "+" in to_page:
+                edge_tag = "Required"
+            elif "x" in to_page:
+                edge_tag = "Dead"
+            elif "s" in to_page:
+                edge_tag = "Start"
+            st.session_state.edges.append({
+                "from": from_page,
+                "to": clean_to,
+                "chosen": True,
+                "tag": edge_tag,
+                "is_secret": "*" in to_page
+            })
 
 # --- Export ---
 st.sidebar.markdown("---")
@@ -163,18 +111,13 @@ if st.sidebar.button("Export as CSV"):
 st.sidebar.markdown("---")
 st.sidebar.markdown("### ℹ️ Input Format Help")
 st.sidebar.markdown("""
-- Enter a **sequence of page numbers** separated by commas.
-- The **first number** is the current page you're on.
-- The **last number** is the **chosen destination page**.
-- All numbers **in between** are unchosen options from that page.
-- Add * to the last number to mark it as a **secret or hidden exit**.
-- Add x to the last number to mark it as a **dead end** — the node will turn **red**.
-- Add t to the last number to mark it as a **final target** — the node will turn **light green** and say **End**.
-- Add + to the last number to mark it as a **required location** — the node will turn **yellow**.
-- You can optionally add a short **text tag** — this appears as a **tooltip** on the destination node.
-- Arrows show directions of travel
-- Orange Nodes have not been explored further yet
-- Green Node is the **first page entered**, and End is marked **light green** too.
+- First number = source node.
+- Following numbers = all destination nodes from the source.
+- Add * to mark a **secret** path (dashed line).
+- Add x to mark a **dead end** (node will be **red**).
+- Add t to mark an **End** node (light green).
+- Add + to mark a **Required** node (yellow).
+- Add s to mark a **Start** node (dark green).
 """)
 
 # --- Build Graph ---
@@ -183,52 +126,36 @@ added_edges = set()
 all_from = set(edge["from"] for edge in st.session_state.edges)
 all_to = set(edge["to"] for edge in st.session_state.edges)
 unexplored = all_to - all_from
-death_nodes = {edge["to"] for edge in st.session_state.edges if edge["from"] == edge["to"]}
+death_nodes = {edge["to"] for edge in st.session_state.edges if edge["tag"] == "Dead"}
 first_node = st.session_state.edges[0]["from"] if st.session_state.edges else None
 
-# Collect nodes with "Required" tag
-required_nodes = set(edge["to"] for edge in st.session_state.edges if edge["tag"].lower() == "required")
-required_nodes |= set(edge["from"] for edge in st.session_state.edges if edge["tag"].lower() == "required")
-
 for edge in st.session_state.edges:
-    if edge["from"] == edge["to"]:
-        continue
-
     edge_key = (edge["from"], edge["to"])
     if edge_key not in added_edges:
-        if edge["from"] not in net.node_ids:
-            if edge["from"] == first_node:
-                node_color = "#007733"
-                node_title = "Start"
-            elif edge["from"] in unexplored:
-                node_color = "orange"
-                node_title = ""
-            elif edge["from"] in required_nodes:
-                node_color = "yellow"
-                node_title = "Required"
-            else:
-                node_color = "#97C2FC"
-                node_title = ""
-            net.add_node(edge["from"], label=edge["from"], color=node_color, title=node_title)
-
-        if edge["to"] in death_nodes:
-            node_color = "red"
-            node_title = "Dead End"
-        elif edge["tag"].lower() == "end":
-            node_color = "#00cc88"
-            node_title = "End"
-        elif edge["tag"].lower() == "required" or edge["to"] in required_nodes:
-            node_color = "yellow"
-            node_title = "Required"
-        elif edge["to"] in unexplored:
-            node_color = "orange"
-            node_title = edge["tag"]
-        else:
-            node_color = "#97C2FC"
-            node_title = edge["tag"]
-
-        if edge["to"] not in net.node_ids:
-            net.add_node(edge["to"], label=edge["to"], title=node_title if node_title else "", color=node_color)
+        for node in [edge["from"], edge["to"]]:
+            if node not in net.node_ids:
+                color = "#97C2FC"
+                title = ""
+                if node == first_node:
+                    color = "#007733"
+                    title = "Start"
+                elif node in unexplored:
+                    color = "orange"
+                elif node in death_nodes:
+                    color = "red"
+                    title = "Dead End"
+                for e in st.session_state.edges:
+                    if e["to"] == node or e["from"] == node:
+                        if e["tag"] == "End":
+                            color = "#00cc88"
+                            title = "End"
+                        elif e["tag"] == "Required":
+                            color = "yellow"
+                            title = "Required"
+                        elif e["tag"] == "Start":
+                            color = "#007733"
+                            title = "Start"
+                net.add_node(node, label=node, color=color, title=title)
 
         net.add_edge(
             edge["from"],
