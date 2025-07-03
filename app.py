@@ -124,7 +124,7 @@ if st.session_state.edges:
 
     if end_nodes:
         try:
-            all_paths = list(nx.all_simple_paths(G, source=start_node, target=end_nodes[0]))
+            all_paths = list(nx.all_simple_paths(G, source=start_node, target=end_nodes[0], cutoff=40))
             required = st.session_state.required_nodes
             valid_paths = [p for p in all_paths if required.issubset(set(p))]
             if valid_paths:
@@ -260,4 +260,3 @@ if st.button("Export Static Graph as PNG"):
     st.image(export_path, caption="Static Graph Export (matplotlib)")
     with open(export_path, "rb") as f:
         st.download_button("⬇️ Download Static Image", f.read(), file_name="ff_graph.png", mime="image/png")
-
