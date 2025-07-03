@@ -5,7 +5,7 @@ import pandas as pd
 import os
 
 st.set_page_config(page_title="FF Graph Mapper", layout="wide")
-st.title("🗌️ Fighting Fantasy Graph Builder")
+st.title("🗜︌ Fighting Fantasy Graph Builder")
 
 # Storage for user inputs
 if "edges" not in st.session_state:
@@ -40,7 +40,7 @@ if st.sidebar.button("Add Path"):
             "from": from_page,
             "to": chosen.replace("*", "").replace("x", "").replace("t", ""),
             "chosen": True,
-            "tag": tag_input.strip(),
+            "tag": "End" if chosen.endswith("t") else tag_input.strip(),
             "is_secret": chosen.endswith("*")
         })
     else:
@@ -58,16 +58,16 @@ if st.sidebar.button("Add Pasted Paths"):
         parts = [p.strip() for p in line.split(",") if p.strip()]
 
         # Handle single dead-end like "64x"
-        if len(parts) == 1 and parts[0].endswith("x"):
-            node = parts[0].replace("x", "")
+        if len(parts) == 1 and (parts[0].endswith("x") or parts[0].endswith("t")):
+            node = parts[0].replace("x", "").replace("t", "")
             st.session_state.edges.append({
                 "from": node,
                 "to": node,
                 "chosen": True,
-                "tag": "",
+                "tag": "End" if parts[0].endswith("t") else "",
                 "is_secret": False
             })
-            continue
+            continue 
 
         if len(parts) >= 2:
             from_page = parts[0]
@@ -90,7 +90,7 @@ if st.sidebar.button("Add Pasted Paths"):
                 "from": from_page,
                 "to": chosen.replace("*", "").replace("x", "").replace("t", ""),
                 "chosen": True,
-                "tag": tag,
+                "tag": "End" if chosen.endswith("t") else tag,
                 "is_secret": chosen.endswith("*")
             })
         else:
@@ -147,13 +147,6 @@ death_nodes = {
 
 # Identify the first node used
 first_node = st.session_state.edges[0]["from"] if st.session_state.edges else None
-
-# Detect all "end" nodes with 't' suffix originally
-end_nodes = {
-    edge["to"]
-    for edge in st.session_state.edges
-    if any(t.endswith("t") for t in [edge["to"] + ("t" if edge["tag"].lower() == "end" else "")])
-}
 
 for edge in st.session_state.edges:
     if edge["from"] == edge["to"]:
