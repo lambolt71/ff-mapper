@@ -56,7 +56,7 @@ if st.sidebar.button("Add Path"):
         if from_tag:
             st.session_state.edges.append({
                 "from": from_page,
-                "to": None,
+                "to": from_page,
                 "chosen": False,
                 "tag": from_tag,
                 "is_secret": "*" in from_page_raw
@@ -109,7 +109,7 @@ if st.sidebar.button("Add Pasted Paths"):
         if from_tag:
             st.session_state.edges.append({
                 "from": from_page,
-                "to": None,
+                "to": from_page,
                 "chosen": False,
                 "tag": from_tag,
                 "is_secret": "*" in from_page_raw
@@ -166,12 +166,12 @@ all_nodes = set()
 node_tags = {}
 
 for edge in st.session_state.edges:
-    for node in [edge["from"], edge["to"]]:
+    for node, apply_tag in [(edge["from"], True), (edge["to"], edge["tag"] in ["Required", "Dead", "End", "Start"])]:
         if node is not None:
             all_nodes.add(node)
             if node not in node_tags:
                 node_tags[node] = set()
-            if edge["tag"]:
+            if apply_tag and edge["tag"]:
                 node_tags[node].add(edge["tag"])
 
 all_from = set(edge["from"] for edge in st.session_state.edges if edge["to"] is not None)
@@ -181,9 +181,9 @@ first_node = next((e["from"] for e in st.session_state.edges if e["to"] is not N
 
 for node in all_nodes:
     if node not in net.node_ids:
+        tags = node_tags.get(node, set())
         color = "#97C2FC"
         title = ""
-        tags = node_tags.get(node, set())
         if "Dead" in tags:
             color = "red"
             title = "Dead End"
