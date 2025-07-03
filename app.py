@@ -8,6 +8,27 @@ import matplotlib.pyplot as plt
 st.set_page_config(page_title="FF Graph Mapper", layout="wide")
 st.title("🗜︌ Fighting Fantasy Graph Builder")
 
+# Find shortest path from Start to End if both exist
+shortest_path_display = ""
+if st.session_state.edges:
+    G = nx.DiGraph()
+    for edge in st.session_state.edges:
+        G.add_edge(edge["from"], edge["to"])
+
+    start_node = st.session_state.edges[0]["from"]
+    end_nodes = [e["to"] for e in st.session_state.edges if e["tag"].lower() == "end"]
+
+    if end_nodes:
+        try:
+            path = nx.shortest_path(G, source=start_node, target=end_nodes[0])
+            shortest_path_display = " → ".join(path)
+            st.markdown(f"**Shortest Path:** {shortest_path_display}")
+        except nx.NetworkXNoPath:
+            st.markdown("**Shortest Path:** No path found between Start and End.")
+    else:
+        st.markdown("**Shortest Path:** End node not defined.")
+
+
 # Storage for user inputs
 if "edges" not in st.session_state:
     st.session_state.edges = []
@@ -211,7 +232,7 @@ if st.button("Export Static Graph as PNG"):
         G.add_edge(edge["from"], edge["to"])
 
     pos = nx.spring_layout(G, seed=42)
-    plt.figure(figsize=(20, 15))
+    plt.figure(figsize=(30, 30))
     nx.draw(
         G, pos, with_labels=True,
         node_size=700, node_color="white",
@@ -224,4 +245,6 @@ if st.button("Export Static Graph as PNG"):
     st.image(export_path, caption="Static Graph Export (matplotlib)")
     with open(export_path, "rb") as f:
         st.download_button("⬇️ Download Static Image", f.read(), file_name="ff_graph.png", mime="image/png")
+
+
 
