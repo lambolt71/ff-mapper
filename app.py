@@ -41,7 +41,7 @@ if st.sidebar.button("Add Path"):
     parts = [p.strip() for p in path_input.split(",") if p.strip()]
 
     if len(parts) >= 2:
-        from_page = parts[0]
+        from_page = parts[0].rstrip("*xt+s")
         for to_page in parts[1:]:
             clean_to = to_page.rstrip("*xt+s")
             edge_tag = ""
@@ -75,7 +75,7 @@ if st.sidebar.button("Add Pasted Paths"):
         parts = [p.strip() for p in line.split(",") if p.strip()]
         if len(parts) < 2:
             continue
-        from_page = parts[0]
+        from_page = parts[0].rstrip("*xt+s")
         for to_page in parts[1:]:
             clean_to = to_page.rstrip("*xt+s")
             edge_tag = ""
@@ -129,6 +129,14 @@ unexplored = all_to - all_from
 death_nodes = {edge["to"] for edge in st.session_state.edges if edge["tag"] == "Dead"}
 first_node = st.session_state.edges[0]["from"] if st.session_state.edges else None
 
+node_tags = {}
+for edge in st.session_state.edges:
+    for node in [edge["from"], edge["to"]]:
+        if node not in node_tags:
+            node_tags[node] = set()
+        if edge["from"] == node or edge["to"] == node:
+            node_tags[node].add(edge["tag"])
+
 for edge in st.session_state.edges:
     edge_key = (edge["from"], edge["to"])
     if edge_key not in added_edges:
@@ -136,25 +144,22 @@ for edge in st.session_state.edges:
             if node not in net.node_ids:
                 color = "#97C2FC"
                 title = ""
-                if node == first_node:
+                tags = node_tags.get(node, set())
+                if "Dead" in tags:
+                    color = "red"
+                    title = "Dead End"
+                elif "End" in tags:
+                    color = "#00cc88"
+                    title = "End"
+                elif "Required" in tags:
+                    color = "yellow"
+                    title = "Required"
+                elif "Start" in tags or node == first_node:
                     color = "#007733"
                     title = "Start"
                 elif node in unexplored:
                     color = "orange"
-                elif node in death_nodes:
-                    color = "red"
-                    title = "Dead End"
-                for e in st.session_state.edges:
-                    if e["to"] == node or e["from"] == node:
-                        if e["tag"] == "End":
-                            color = "#00cc88"
-                            title = "End"
-                        elif e["tag"] == "Required":
-                            color = "yellow"
-                            title = "Required"
-                        elif e["tag"] == "Start":
-                            color = "#007733"
-                            title = "Start"
+
                 net.add_node(node, label=node, color=color, title=title)
 
         net.add_edge(
