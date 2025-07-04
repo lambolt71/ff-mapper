@@ -17,9 +17,10 @@ shortest_path_display = ""
 if st.session_state.edges:
     G = nx.DiGraph()
     for edge in st.session_state.edges:
-        G.add_edge(edge["from"], edge["to"])
+        if edge["to"] is not None:
+            G.add_edge(edge["from"], edge["to"])
 
-    start_node = st.session_state.edges[0]["from"]
+    start_node = next((e["from"] for e in st.session_state.edges if e["to"] is not None), None)
     end_nodes = [e["to"] for e in st.session_state.edges if e["tag"].lower() == "end"]
 
     if end_nodes:
@@ -63,7 +64,7 @@ if st.sidebar.button("Add Path"):
                 "is_secret": "*" in to_page
             })
 
-        # Also mark from_page if it has tag modifiers like +, x, t, s
+        # Only store from-page node tag for rendering purposes (no edge added)
         from_tag = ""
         if "+" in from_page_raw:
             from_tag = "Required"
@@ -76,8 +77,8 @@ if st.sidebar.button("Add Path"):
         if from_tag:
             st.session_state.edges.append({
                 "from": from_page,
-                "to": from_page,
-                "chosen": True,
+                "to": None,
+                "chosen": False,
                 "tag": from_tag,
                 "is_secret": "*" in from_page_raw
             })
@@ -128,8 +129,8 @@ if st.sidebar.button("Add Pasted Paths"):
         if from_tag:
             st.session_state.edges.append({
                 "from": from_page,
-                "to": from_page,
-                "chosen": True,
+                "to": None,
+                "chosen": False,
                 "tag": from_tag,
                 "is_secret": "*" in from_page_raw
             })
@@ -162,23 +163,27 @@ st.sidebar.markdown("""
 # --- Build Graph ---
 net = Network(height="1000px", width="100%", bgcolor="#111", font_color="white", directed=True)
 added_edges = set()
-all_from = set(edge["from"] for edge in st.session_state.edges)
-all_to = set(edge["to"] for edge in st.session_state.edges)
+all_from = set(edge["from"] for edge in st.session_state.edges if edge["to"] is not None)
+all_to = set(edge["to"] for edge in st.session_state.edges if edge["to"] is not None)
 unexplored = all_to - all_from
-death_nodes = {edge["to"] for edge in st.session_state.edges if edge["tag"] == "Dead"}
-first_node = st.session_state.edges[0]["from"] if st.session_state.edges else None
+first_node = next((e["from"] for e in st.session_state.edges if e["to"] is not None), None)
 
 node_tags = {}
 for edge in st.session_state.edges:
-    for node in [edge["from"], edge["to"]]:
+    if edge["to"] is None:
+        node = edge["from"]
         if node not in node_tags:
             node_tags[node] = set()
-        if edge["from"] == node or edge["to"] == node:
-            node_tags[node].add(edge["tag"])
+        node_tags[node].add(edge["tag"])
+    else:
+        node = edge["to"]
+        if node not in node_tags:
+            node_tags[node] = set()
+        node_tags[node].add(edge["tag"])
 
 for edge in st.session_state.edges:
     edge_key = (edge["from"], edge["to"])
-    if edge_key not in added_edges:
+    if edge["to"] is not None and edge_key not in added_edges:
         for node in [edge["from"], edge["to"]]:
             if node not in net.node_ids:
                 color = "#97C2FC"
@@ -224,7 +229,8 @@ st.markdown("### 📷 Static Image Export")
 if st.button("Export Static Graph as PNG"):
     G = nx.DiGraph()
     for edge in st.session_state.edges:
-        G.add_edge(edge["from"], edge["to"])
+        if edge["to"] is not None:
+            G.add_edge(edge["from"], edge["to"])
 
     pos = nx.spring_layout(G, seed=42)
     plt.figure(figsize=(30, 30))
